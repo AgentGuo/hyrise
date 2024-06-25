@@ -80,6 +80,10 @@ bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   return true;
 }
 
+bool TPCHBenchmarkItemRunner::_on_execute_ch_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor){
+  return _on_execute_item(item_id, sql_executor);
+}
+
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
   // Make sure that clustering, indexes, and constraints have made it all the way up to here
   const auto orders_table = Hyrise::get().storage_manager.get_table("orders");

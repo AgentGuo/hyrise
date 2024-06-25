@@ -80,6 +80,16 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+# Configure hyriseBenchmarkCH
+add_executable(hyriseBenchmarkCH ch_benchmark.cpp)
+target_link_libraries(
+        hyriseBenchmarkCH
+
+        hyrise
+        hyriseBenchmarkLib
+)
+
+
 # Configure hyriseBenchmarkTPCH
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 

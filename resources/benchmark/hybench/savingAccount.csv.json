@@ -1,0 +1,44 @@
+{
+    "columns": [
+        {
+            "name": "accountID",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "userID",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "balance",
+            "nullable": true,
+            "type": "float"
+        },
+        {
+            "name": "Isblocked",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "timestamp",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "fresh_ts",
+            "nullable": true,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": ","
+    }
+}

@@ -24,6 +24,7 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "hybench/hybench_table_generator.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -39,13 +40,17 @@ void generate_benchmark_data(std::string argument_string) {
   auto benchmark_data_config = std::vector<std::string>{};
   // Split benchmark name and sizing factor
   boost::split(benchmark_data_config, argument_string, boost::is_any_of(":"), boost::token_compress_on);
-  Assert(benchmark_data_config.size() == 2,
-         "Malformed input for benchmark data generation. Expecting a benchmark name and a sizing factor.");
+//  Assert(benchmark_data_config.size() == 2,
+//         "Malformed input for benchmark data generation. Expecting a benchmark name and a sizing factor.");
 
   const auto benchmark_name = benchmark_data_config[0];
   const auto sizing_factor = boost::lexical_cast<float, std::string>(benchmark_data_config[1]);
+  std::string data_path = "";
+  if (benchmark_data_config.size() > 2) {
+    data_path = benchmark_data_config[2];
+  }
 
-  Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
+  Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc" || benchmark_name == "hybench",
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
   auto config = std::make_shared<hyrise::BenchmarkConfig>(hyrise::BenchmarkConfig::get_default_config());
@@ -56,7 +61,9 @@ void generate_benchmark_data(std::string argument_string) {
     hyrise::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpch") {
     hyrise::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
-  } else {
+  } else if (benchmark_name == "hybench"){
+    hyrise::HybenchTableGenerator(data_path, config).generate_and_store();
+  }else {
     Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
   }
 }

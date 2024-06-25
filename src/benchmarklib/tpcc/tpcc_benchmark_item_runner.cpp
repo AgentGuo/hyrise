@@ -52,6 +52,10 @@ bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   return successful;
 }
 
+bool TPCCBenchmarkItemRunner::_on_execute_ch_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor){
+  return _on_execute_item(item_id, sql_executor);
+}
+
 std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   // This should be the only place where this is needed. If we need an ID-to-name mapping (or vice versa) again, we
   // should use a proper bimap.

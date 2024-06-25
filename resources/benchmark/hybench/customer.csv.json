@@ -1,0 +1,89 @@
+{
+    "columns": [
+        {
+            "name": "custID",
+            "nullable": false,
+            "type": "int"
+        },
+        {
+            "name": "companyID",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "gender",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "name",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "age",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "phone",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "province",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "city",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "loan_balance",
+            "nullable": true,
+            "type": "float"
+        },
+        {
+            "name": "saving_credit",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "checking_credit",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "loan_credit",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "Isblocked",
+            "nullable": true,
+            "type": "int"
+        },
+        {
+            "name": "created_date",
+            "nullable": true,
+            "type": "string"
+        },
+        {
+            "name": "last_update_timestamp",
+            "nullable": true,
+            "type": "string"
+        }
+    ],
+    "config": {
+        "delimiter": "\n",
+        "delimiter_escape": "\\",
+        "escape": "\"",
+        "null_handling": "reject_null_strings",
+        "quote": "\"",
+        "reject_quoted_nonstrings": true,
+        "rfc_mode": true,
+        "separator": ","
+    }
+}
