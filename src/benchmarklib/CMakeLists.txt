@@ -33,6 +33,8 @@ set(
     tpch/tpch_constants.hpp
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
+    tpch/ch_tpch_queries.cpp
+    tpch/ch_tpch_queries.hpp
     tpch/tpch_benchmark_item_runner.cpp
     tpch/tpch_benchmark_item_runner.hpp
     tpch/tpch_table_generator.cpp

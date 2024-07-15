@@ -31,6 +31,7 @@ extern "C" {
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/table.hpp"
 #include "tpch_queries.hpp"
+#include "ch_tpch_queries.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
@@ -81,7 +82,15 @@ bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 }
 
 bool TPCHBenchmarkItemRunner::_on_execute_ch_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor){
-  return _on_execute_item(item_id, sql_executor);
+  const auto sql = _build_ch_query(item_id);
+  std::cout<<sql<<std::endl;
+  auto expected_result_table = std::shared_ptr<const Table>{};
+  if (!_dedicated_expected_results.empty()) {
+    expected_result_table = _dedicated_expected_results[item_id];
+  }
+  const auto [status, table] = sql_executor.execute(sql, expected_result_table);
+  Assert(status == SQLPipelineStatus::Success, "TPC-H items should not fail.");
+  return true;
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
@@ -122,6 +131,16 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
     SQLPipelineBuilder{sql.str()}.create_pipeline().get_result_table();
   }
 }
+
+std::string TPCHBenchmarkItemRunner::_build_ch_query(const BenchmarkItemID item_id) {
+  // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
+  // fine with them not being synced across threads and object cost is not an issue, we simply use one generator per
+  // calling thread.
+  static thread_local auto random_engine = std::minstd_rand{_random_seed++};
+  // Will be filled with the parameters for this query and passed to the next method which builds the query string
+  auto parameters = std::vector<std::string>{};
+  return _ch_substitute_placeholders(item_id, parameters);
+}  // NOLINT
 
 std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
@@ -539,6 +558,27 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
 
   // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
   auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
+
+  for (const auto& parameter_value : parameter_values) {
+    boost::replace_first(query_template, "?", parameter_value);
+  }
+
+  Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder.");
+
+  return query_template;
+}
+
+std::string TPCHBenchmarkItemRunner::_ch_substitute_placeholders(const BenchmarkItemID item_id,
+                                                              const std::vector<std::string>& parameter_values) const {
+  if (_use_prepared_statements) {
+    // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
+    auto sql = std::stringstream{};
+    sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
+    return sql.str();
+  }
+
+  // Take the SQL query (from ch_tpch_queries.cpp) and replace one placeholder (question mark) after another
+  auto query_template = std::string{ch_tpch_queries.find(item_id + 1)->second};
 
   for (const auto& parameter_value : parameter_values) {
     boost::replace_first(query_template, "?", parameter_value);

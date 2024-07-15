@@ -69,7 +69,8 @@ std::string CHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) cons
 const std::vector<int>& CHBenchmarkItemRunner::weights() const {
   // Except for New-Order, the given weights are minimums (see 5.2.3 in the standard). Since New-Order is the
   // transaction being counted for tpmC, we want it to have the highest weight possible.
-  static const auto weights = std::vector<int>{4, 45, 4, 43, 4, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+  static const auto weights = std::vector<int>{4, 45, 4, 43, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5};
+//  static const auto weights = std::vector<int>{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   return weights;
 }
 

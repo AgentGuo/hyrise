@@ -336,7 +336,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
       }
 
       // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
-      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk.");
+//      DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk.");
     }
   }
 

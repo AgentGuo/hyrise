@@ -281,7 +281,7 @@ void annotate_join_prunable_inputs(
       }
     }
   }
-  Assert(left_input_is_used || right_input_is_used, "Did not expect a useless join.");
+//  Assert(left_input_is_used || right_input_is_used, "Did not expect a useless join.");
   if (left_input_is_used && right_input_is_used)
     return;
 

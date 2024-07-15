@@ -37,6 +37,7 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> TPC-H 1)
   std::string _build_query(const BenchmarkItemID item_id);
+  std::string _build_ch_query(const BenchmarkItemID item_id);
 
   // Same as build_query, but uses the same parameters every time. Good for tests.
   std::string _build_deterministic_query(const BenchmarkItemID item_id);
@@ -45,6 +46,8 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // depending on _use_prepared_statements
   std::string _substitute_placeholders(const BenchmarkItemID item_id,
                                        const std::vector<std::string>& parameter_values) const;
+  std::string _ch_substitute_placeholders(const BenchmarkItemID item_id,
+                                          const std::vector<std::string>& parameter_values) const;
 
   // Should we use prepared statements or generate "regular" SQL queries?
   const bool _use_prepared_statements;
