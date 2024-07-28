@@ -50,7 +50,7 @@ void generate_benchmark_data(std::string argument_string) {
     data_path = benchmark_data_config[2];
   }
 
-  Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc" || benchmark_name == "hybench",
+  Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc" || benchmark_name == "hybench" || benchmark_name == "ch_bench",
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
   auto config = std::make_shared<hyrise::BenchmarkConfig>(hyrise::BenchmarkConfig::get_default_config());
@@ -63,6 +63,9 @@ void generate_benchmark_data(std::string argument_string) {
     hyrise::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
   } else if (benchmark_name == "hybench"){
     hyrise::HybenchTableGenerator(data_path, config).generate_and_store();
+  } else if (benchmark_name == "ch_bench"){
+    hyrise::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
+    hyrise::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
   }else {
     Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
   }
