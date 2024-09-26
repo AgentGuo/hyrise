@@ -40,6 +40,8 @@ class TPCC:
         self.db = psycopg2.connect(host='localhost', port=port)
         self.cursor = self.db.cursor()
         self.exec_count = {'delivery': 0, 'new_order': 0, 'order_status': 0, 'payment': 0, 'stock_level': 0}
+        self.exec_success_count = {'delivery': 0, 'new_order': 0, 'order_status': 0, 'payment': 0, 'stock_level': 0}
+        self.exec_failed_count = {'delivery': 0, 'new_order': 0, 'order_status': 0, 'payment': 0, 'stock_level': 0}
         self.exec_weight = {'delivery': 4, 'new_order': 45, 'order_status': 4, 'payment': 43, 'stock_level': 4}
         self.run_time = time
         self.exec_time = {'delivery': 0, 'new_order': 0, 'order_status': 0, 'payment': 0, 'stock_level': 0}
@@ -51,21 +53,29 @@ class TPCC:
     def run(self):
         start_time = time.time()
         while(time.time() - start_time < self.run_time):
-            transaction = random.choices(list(self.exec_weight.keys()), weights=list(self.exec_weight.values()))[0]
-            trans_start_time = time.time()
-            if transaction == 'delivery':
-                self.delivery_trans()
-            elif transaction == 'new_order':
-                self.new_order_trans()
-            elif transaction == 'order_status':
-                self.order_status_trans()
-            elif transaction == 'payment':
-                self.payment_trans()
-            elif transaction == 'stock_level':
-                self.stock_level_trans()
-            trans_end_time = time.time()
-            self.exec_time[transaction] += trans_end_time - trans_start_time
+            try:
+                transaction = random.choices(list(self.exec_weight.keys()), weights=list(self.exec_weight.values()))[0]
+                trans_start_time = time.time()
+                if transaction == 'delivery':
+                    self.delivery_trans()
+                elif transaction == 'new_order':
+                    self.new_order_trans()
+                elif transaction == 'order_status':
+                    self.order_status_trans()
+                elif transaction == 'payment':
+                    self.payment_trans()
+                elif transaction == 'stock_level':
+                    self.stock_level_trans()
+                trans_end_time = time.time()
+                self.exec_time[transaction] += trans_end_time - trans_start_time
+                self.exec_success_count[transaction] += 1
+            except Exception as e:
+                # 处理其他异常
+                # print(e)
+                self.exec_failed_count[transaction] += 1
             self.exec_count[transaction] += 1
+        print('tpcc执行成功次数:', self.exec_success_count)
+        print('tpcc执行失败次数:', self.exec_failed_count)
         print('tpcc执行次数:', self.exec_count)
         print('tpcc执行耗时(s):', self.exec_time)
 
@@ -208,6 +218,8 @@ class TPCH():
         self.num_warehouse = num_warehouse
         self.db = psycopg2.connect(host='localhost', port=port)
         self.cursor = self.db.cursor()
+        self.exec_success_count = [0]*22
+        self.exec_failed_count = [0]*22
         self.exec_count = [0]*22
         self.exec_time = [0]*22
         self.run_time = time
@@ -217,56 +229,64 @@ class TPCH():
         exec_query = 1
         while(time.time() - start_time < self.run_time):
             query_start_time = time.time()
-            if exec_query == 1:
-                self.q1()
-            elif exec_query == 2:
-                self.q2()
-            elif exec_query == 3:
-                self.q3()
-            elif exec_query == 4:
-                self.q4()
-            elif exec_query == 5:
-                self.q5()
-            elif exec_query == 6:
-                self.q6()
-            elif exec_query == 7:
-                self.q7()
-            elif exec_query == 8:
-                self.q8()
-            elif exec_query == 9:
-                self.q9()
-            elif exec_query == 10:
-                self.q10()
-            elif exec_query == 11:
-                self.q11()
-            elif exec_query == 12:
-                self.q12()
-            elif exec_query == 13:
-                self.q13()
-            elif exec_query == 14:
-                self.q14()
-            elif exec_query == 15:
-                self.q15()
-            elif exec_query == 16:
-                self.q16()
-            elif exec_query == 17:
-                self.q17()
-            elif exec_query == 18:
-                self.q18()
-            elif exec_query == 19:
-                self.q19()
-            elif exec_query == 20:
-                self.q20()
-            elif exec_query == 21:
-                self.q21()
-            elif exec_query == 22:
-                self.q22()
-            query_end_time = time.time()
-            self.exec_time[exec_query-1] += query_end_time - query_start_time
+            try:
+                if exec_query == 1:
+                    self.q1()
+                elif exec_query == 2:
+                    self.q2()
+                elif exec_query == 3:
+                    self.q3()
+                elif exec_query == 4:
+                    self.q4()
+                elif exec_query == 5:
+                    self.q5()
+                elif exec_query == 6:
+                    self.q6()
+                elif exec_query == 7:
+                    self.q7()
+                elif exec_query == 8:
+                    self.q8()
+                elif exec_query == 9:
+                    self.q9()
+                elif exec_query == 10:
+                    self.q10()
+                elif exec_query == 11:
+                    self.q11()
+                elif exec_query == 12:
+                    self.q12()
+                elif exec_query == 13:
+                    self.q13()
+                elif exec_query == 14:
+                    self.q14()
+                elif exec_query == 15:
+                    self.q15()
+                elif exec_query == 16:
+                    self.q16()
+                elif exec_query == 17:
+                    self.q17()
+                elif exec_query == 18:
+                    self.q18()
+                elif exec_query == 19:
+                    self.q19()
+                elif exec_query == 20:
+                    self.q20()
+                elif exec_query == 21:
+                    self.q21()
+                elif exec_query == 22:
+                    self.q22()
+                query_end_time = time.time()
+                self.exec_time[exec_query-1] += query_end_time - query_start_time
+                self.exec_success_count[exec_query-1] += 1
+            except Exception as e:
+                # 处理其他异常
+                # print(e)
+                self.exec_failed_count[exec_query-1] += 1
             self.exec_count[exec_query-1] += 1
             exec_query += 1
             if (exec_query >= 23):
                 exec_query = 1
+        print('tpch执行成功次数:', self.exec_success_count)
+        print('tpch执行失败次数:', self.exec_failed_count)
         print('tpch执行次数:', self.exec_count)
         print('tpch执行耗时(s):', self.exec_time)
 
