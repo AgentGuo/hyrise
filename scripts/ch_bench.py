@@ -7,6 +7,9 @@ import random
 import time
 import threading
 import argparse
+import queue
+import json
+from datetime import datetime
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
@@ -35,7 +38,7 @@ def show_data(str, data):
     print(str, arr)
 
 class TPCC:
-    def __init__(self, num_warehouse, port, time):
+    def __init__(self, num_warehouse, port, time, id, queue):
         self.num_warehouse = num_warehouse
         self.db = psycopg2.connect(host='localhost', port=port)
         self.cursor = self.db.cursor()
@@ -45,6 +48,8 @@ class TPCC:
         self.exec_weight = {'delivery': 4, 'new_order': 45, 'order_status': 4, 'payment': 43, 'stock_level': 4}
         self.run_time = time
         self.exec_time = {'delivery': 0, 'new_order': 0, 'order_status': 0, 'payment': 0, 'stock_level': 0}
+        self.id = id
+        self.queue = queue
 
     def __del__(self):
         self.cursor.close()
@@ -74,10 +79,19 @@ class TPCC:
                 # print(e)
                 self.exec_failed_count[transaction] += 1
             self.exec_count[transaction] += 1
-        print('tpcc执行成功次数:', self.exec_success_count)
-        print('tpcc执行失败次数:', self.exec_failed_count)
-        print('tpcc执行次数:', self.exec_count)
-        print('tpcc执行耗时(s):', self.exec_time)
+        result = {
+            "id": self.id,
+            "type": "tpcc",
+            "success_count": self.exec_success_count,
+            "failed_count": self.exec_failed_count,
+            "exec_count": self.exec_count,
+            "exec_time": self.exec_time
+        }
+        self.queue.put(result)
+        # print('tpcc执行成功次数:', self.exec_success_count)
+        # print('tpcc执行失败次数:', self.exec_failed_count)
+        # print('tpcc执行次数:', self.exec_count)
+        # print('tpcc执行耗时(s):', self.exec_time)
 
     def delivery_trans(self):
         w_id = random.randint(1, num_warehouse)
@@ -214,7 +228,7 @@ class TPCC:
         self.db.commit()
 
 class TPCH():
-    def __init__(self, num_warehouse, port, time):
+    def __init__(self, num_warehouse, port, time, queue, id):
         self.num_warehouse = num_warehouse
         self.db = psycopg2.connect(host='localhost', port=port)
         self.cursor = self.db.cursor()
@@ -223,6 +237,8 @@ class TPCH():
         self.exec_count = [0]*22
         self.exec_time = [0]*22
         self.run_time = time
+        self.queue = queue
+        self.id = id
 
     def run(self):
         start_time = time.time()
@@ -285,10 +301,19 @@ class TPCH():
             exec_query += 1
             if (exec_query >= 23):
                 exec_query = 1
-        print('tpch执行成功次数:', self.exec_success_count)
-        print('tpch执行失败次数:', self.exec_failed_count)
-        print('tpch执行次数:', self.exec_count)
-        print('tpch执行耗时(s):', self.exec_time)
+        result = {
+            "id": self.id,
+            "type": "tpch",
+            "success_count": self.exec_success_count,
+            "failed_count": self.exec_failed_count,
+            "exec_count": self.exec_count,
+            "exec_time": self.exec_time
+        }
+        self.queue.put(result)
+        # print('tpch执行成功次数:', self.exec_success_count)
+        # print('tpch执行失败次数:', self.exec_failed_count)
+        # print('tpch执行次数:', self.exec_count)
+        # print('tpch执行耗时(s):', self.exec_time)
 
     def q1(self):
         self.cursor.execute('''SELECT   OL_NUMBER,
@@ -338,17 +363,48 @@ AND OL_O_ID = O_ID
 GROUP BY OL_O_ID, OL_W_ID, OL_D_ID, O_ENTRY_D
 ORDER BY REVENUE DESC, O_ENTRY_D LIMIT 10;''')
 
+#     def q4(self):
+#         self.cursor.execute('''SELECT O_OL_CNT, COUNT(*) AS ORDER_COUNT
+# FROM "ORDER"
+#     WHERE EXISTS (SELECT *
+#             FROM ORDER_LINE
+#             WHERE O_ID = OL_O_ID
+#             AND O_W_ID = OL_W_ID
+#             AND O_D_ID = OL_D_ID
+#             AND OL_DELIVERY_D >= O_ENTRY_D)
+# GROUP    BY O_OL_CNT
+# ORDER    BY O_OL_CNT LIMIT 10;''')
+
     def q4(self):
-        self.cursor.execute('''SELECT O_OL_CNT, COUNT(*) AS ORDER_COUNT
-FROM "ORDER"
-    WHERE EXISTS (SELECT *
-            FROM ORDER_LINE
-            WHERE O_ID = OL_O_ID
-            AND O_W_ID = OL_W_ID
-            AND O_D_ID = OL_D_ID
-            AND OL_DELIVERY_D >= O_ENTRY_D)
-GROUP    BY O_OL_CNT
-ORDER    BY O_OL_CNT LIMIT 10;''')
+        self.cursor.execute('''SELECT O.O_OL_CNT, COUNT(*) AS ORDER_COUNT
+FROM "ORDER" O
+JOIN ORDER_LINE OL ON O.O_ID = OL.OL_O_ID
+                   AND O.O_W_ID = OL.OL_W_ID
+                   AND O.O_D_ID = OL.OL_D_ID
+WHERE OL.OL_DELIVERY_D >= O.O_ENTRY_D
+GROUP BY O.O_OL_CNT
+ORDER BY O.O_OL_CNT
+LIMIT 10;''')
+
+#     def q5(self):
+#         self.cursor.execute('''SELECT n_name,
+# SUM(OL_AMOUNT) AS REVENUE
+# FROM     CUSTOMER, "ORDER", ORDER_LINE, STOCK, supplier, nation, region
+# WHERE     C_ID = O_C_ID
+# AND C_W_ID = O_W_ID
+# AND C_D_ID = O_D_ID
+# AND OL_O_ID = O_ID
+# AND OL_W_ID = O_W_ID
+# AND OL_D_ID=O_D_ID
+# AND OL_W_ID = S_W_ID
+# AND OL_I_ID = S_I_ID
+# AND ((S_W_ID * S_I_ID)%10000) = s_suppkey
+# AND s_nationkey = n_nationkey
+# AND n_regionkey = r_regionkey
+# AND r_name = 'EUROPE'
+# AND (C_ID%25) = s_nationkey
+# GROUP BY n_name
+# ORDER BY REVENUE DESC LIMIT 10;''')
 
     def q5(self):
         self.cursor.execute('''SELECT n_name,
@@ -362,7 +418,7 @@ AND OL_W_ID = O_W_ID
 AND OL_D_ID=O_D_ID
 AND OL_W_ID = S_W_ID
 AND OL_I_ID = S_I_ID
-AND ((S_W_ID * S_I_ID)%10000) = s_suppkey
+AND S_I_ID = s_suppkey
 AND s_nationkey = n_nationkey
 AND n_regionkey = r_regionkey
 AND r_name = 'EUROPE'
@@ -636,9 +692,11 @@ ORDER BY SUBSTR(C_STATE,1,1) LIMIT 10;''')
 # tpch_instance = TPCH(num_warehouse=num_warehouse, port='5432', time=360)
 # tpch_instance.run()
 
+shared_queue = queue.Queue()
+
 # Create TPCC and TPCH instances
-tpcc_instances = [TPCC(num_warehouse=num_warehouse, port=port, time=run_time) for _ in range(num_tpcc_threads)]
-tpch_instances = [TPCH(num_warehouse=num_warehouse, port=port, time=run_time) for _ in range(num_tpch_threads)]
+tpcc_instances = [TPCC(num_warehouse=num_warehouse, port=port, time=run_time, queue=shared_queue, id=i) for i in range(num_tpcc_threads)]
+tpch_instances = [TPCH(num_warehouse=num_warehouse, port=port, time=run_time, queue=shared_queue, id=i) for i in range(num_tpch_threads)]
 
 
 # Create threads for TPCC
@@ -664,3 +722,8 @@ for tpcc_thread in tpcc_threads:
 # Wait for all TPCH threads to finish
 for tpch_thread in tpch_threads:
     tpch_thread.join()
+
+all_result = list(shared_queue.queue)
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")  # "2024-10-09_14-30"
+with open(f"result_{timestamp}.json", "w") as f:
+    json.dump(all_result, f)

@@ -136,7 +136,7 @@ std::string TPCHBenchmarkItemRunner::_build_ch_query(const BenchmarkItemID item_
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
   // fine with them not being synced across threads and object cost is not an issue, we simply use one generator per
   // calling thread.
-  static thread_local auto random_engine = std::minstd_rand{_random_seed++};
+//  static thread_local auto random_engine = std::minstd_rand{_random_seed++};
   // Will be filled with the parameters for this query and passed to the next method which builds the query string
   auto parameters = std::vector<std::string>{};
   return _ch_substitute_placeholders(item_id, parameters);
