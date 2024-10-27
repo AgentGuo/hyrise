@@ -55,6 +55,8 @@ void generate_benchmark_data(std::string argument_string) {
 
   auto config = std::make_shared<hyrise::BenchmarkConfig>(hyrise::BenchmarkConfig::get_default_config());
   config->cache_binary_tables = true;
+  config->table_indexes = true;
+  config->chunk_indexes = true;
   if (benchmark_name == "tpcc") {
     hyrise::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpcds") {
