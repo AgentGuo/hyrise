@@ -65,7 +65,7 @@ void generate_benchmark_data(std::string argument_string) {
     hyrise::HybenchTableGenerator(data_path, config).generate_and_store();
   } else if (benchmark_name == "ch_bench"){
     hyrise::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
-    hyrise::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
+    hyrise::TPCHTableGenerator{1, ClusteringConfiguration::None, config}.generate_and_store();
   }else {
     Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
   }
