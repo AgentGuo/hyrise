@@ -36,8 +36,8 @@ class BenchmarkConfig {
   BenchmarkMode benchmark_mode{BenchmarkMode::Ordered};
   ChunkOffset chunk_size{Chunk::DEFAULT_SIZE};
   EncodingConfig encoding_config{};
-  bool chunk_indexes{false};
-  bool table_indexes{false};
+  bool chunk_indexes{true};
+  bool table_indexes{true};
   int64_t max_runs{-1};
   Duration max_duration{std::chrono::seconds{60}};
   Duration warmup_duration{0};

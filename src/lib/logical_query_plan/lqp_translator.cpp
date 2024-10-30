@@ -237,6 +237,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // Create a vector of chunk ids that have an index and are not pruned.
   const auto& indexes = table->get_table_indexes(column_id);
+  if (indexes.empty()) {
+    return _translate_predicate_node_to_table_scan(node, input_operator);
+  }
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");

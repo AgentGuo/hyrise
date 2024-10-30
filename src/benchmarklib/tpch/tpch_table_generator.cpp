@@ -318,9 +318,9 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
           {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
           {"customer", {{"c_custkey"}, {"c_nationkey"}}},
           {"orders", {{"o_orderkey"}, {"o_custkey"}}},
-          {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
-          {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
-          {"region", {{"r_regionkey"}}}};
+          {"lineitem", {{"l_orderkey"}, {"l_partkey"}, {"l_shipdate"}}},
+          {"nation", {{"n_nationkey"}, {"n_regionkey"}, {"n_name"}}},
+          {"region", {{"r_regionkey"}, {"r_name"}}}};
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {

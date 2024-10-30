@@ -23,11 +23,11 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 // Only if we expect num_output_rows <= num_input_rows * selectivity_threshold, the ScanType can be set to IndexScan.
 // This threshold is kind of arbitrarily chosen, but the following paper suggests something similar: "Access Path
 // Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?"
-constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
+constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 1.0f;
 
 // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan. The threshold is taken
 // from: "Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance."
-constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
+constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 0.0f;
 
 bool is_single_column_index(const TableIndexStatistics& index_statistics) {
   return index_statistics.column_ids.size() == 1;
@@ -36,15 +36,18 @@ bool is_single_column_index(const TableIndexStatistics& index_statistics) {
 bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
                               const std::shared_ptr<PredicateNode>& predicate_node,
                               const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
+//  std::cout<<"debug1"<<std::endl;
   if (!is_single_column_index(index_statistics)) {
     return false;
   }
+//  std::cout<<"debug2"<<std::endl;
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates || operator_predicates->size() != 1) {
     return false;
   }
+//  std::cout<<"debug3"<<std::endl;
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
@@ -52,10 +55,18 @@ bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
   if (is_column_id(operator_predicate.value)) {
     return false;
   }
+//  std::cout<<"debug4"<<std::endl;
+//  std::cout<<"column_ids: ";
+//  for(const auto id : index_statistics.column_ids){
+//    std::cout<<id<<" ";
+//  }
+//  std::cout<<std::endl;
+//  std::cout<<"predicate.column_id: "<<operator_predicate.column_id<<std::endl;
 
   if (index_statistics.column_ids[0] != operator_predicate.column_id) {
     return false;
   }
+//  std::cout<<"debug5"<<std::endl;
 
   // There is no conceptual limitation to this rule with other predicate conditions, but Hyrise's secondary indexes are
   // hash-based and thus lack support for other predicate conditions.
@@ -63,12 +74,14 @@ bool is_index_scan_applicable(const TableIndexStatistics& index_statistics,
       operator_predicate.predicate_condition != PredicateCondition::NotEquals) {
     return false;
   }
+//  std::cout<<"debug6"<<std::endl;
 
   const auto row_count_table =
       cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) {
     return false;
   }
+//  std::cout<<"debug7"<<std::endl;
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
   const float selectivity = row_count_predicate / row_count_table;
