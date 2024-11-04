@@ -38,17 +38,19 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active.");
 //  _workers.reserve(Hyrise::get().topology.num_cpus());
-  _workers_per_core = 2;
-  _workers.reserve(Hyrise::get().topology.num_cpus()*_workers_per_core);
+  _cpus_size = std::min(32ul, Hyrise::get().topology.num_cpus()); // 限制核心数
+  _workers_per_core = 2; // 每个核心跑的worker数
+  _workers.reserve(_cpus_size*_workers_per_core);
   _node_count = Hyrise::get().topology.nodes().size();
   _queues.resize(_node_count);
   _workers_per_node.reserve(_node_count);
+  std::cout<<std::endl<<"node_count: "<<_node_count<<", cpus_size_per_node: "<<_cpus_size<<", workers_per_core: "<<_workers_per_core<<std::endl;
 
   for (auto node_id = NodeID{0}; node_id < _node_count; ++node_id) {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     // Tracked per node as core restrictions can lead to unbalanced core counts.
-    _workers_per_node.emplace_back(topology_node.cpus.size()*_workers_per_core);
+    _workers_per_node.emplace_back(_cpus_size*_workers_per_core);
 
     // Only create queues for nodes with CPUs assigned. Otherwise, no workers are active on these nodes and we might
     // add tasks to these queues that can never be directly pulled and must be stolen by other nodes' workers. As
@@ -58,8 +60,7 @@ void NodeQueueScheduler::begin() {
       auto queue = std::make_shared<TaskQueue>(node_id);
       _queues[node_id] = queue;
 
-      // 每个节点空出来一个核心，用于跑监控程序，同时每个核心跑_workers_per_core个线程
-      for (auto i = size_t{1}; i < topology_node.cpus.size(); i++) {
+      for (auto i = size_t{0}; i < _cpus_size; i++) {
         const auto& topology_cpu = topology_node.cpus[i];
         // TODO(anybody): Place queues on the actual NUMA node once we have NUMA-aware allocators.
         for (auto j = size_t{0}; j < _workers_per_core; j++){

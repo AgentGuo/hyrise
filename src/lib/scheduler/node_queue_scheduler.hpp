@@ -105,6 +105,7 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   size_t _node_count{1};
   size_t _workers_per_core{1};
+  size_t _cpus_size{1};
   std::vector<size_t> _workers_per_node;
 
   std::mutex _finish_mutex{};
