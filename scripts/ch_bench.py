@@ -10,7 +10,9 @@ import argparse
 import queue
 import json
 from datetime import datetime
+import os
 
+os.environ['PGGSSENCMODE'] = 'disable'
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--num_warehouse", type=int, help="Number of warehouses", default=1)
