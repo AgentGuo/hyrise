@@ -55,7 +55,9 @@ def save_data_to_csv(data, filename):
     if not data:
         print("No data to save.")
         return
-    keys = data[0].keys()
+    keys = set()
+    for item in data:
+        keys.update(item.keys())
     with open(filename, 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, fieldnames=keys)
         dict_writer.writeheader()
@@ -64,25 +66,54 @@ def save_data_to_csv(data, filename):
 def split_events(events, batch_size):
     return [events[i:i + batch_size] for i in range(0, len(events), batch_size)]
 
-def monitor_perf(pid=0, duration=10, case_name = '', save_local = False):
-    batch_size = 4
+def get_architecture():
+    arch = subprocess.check_output(['uname', '-m']).strip().decode()
+    if 'x86' in arch:
+        return 'x86'
+    elif 'arm' in arch or 'aarch64' in arch:
+        return 'arm'
+    else:
+        raise ValueError("Unsupported architecture")
+
+def get_perf_event_table():
+    architecture = get_architecture()
     # 定义需要监控的事件
-    all_events = [
-        'frontend_retired.l1i_miss',
-        'instructions',
-        'mem_inst_retired.all_loads',
-        'mem_load_retired.fb_hit',
-        'mem_load_retired.l1_hit',
-        'mem_load_retired.l1_miss',
-        'l2_rqsts.code_rd_hit',
-        'l2_rqsts.code_rd_miss',
-        'mem_load_retired.l2_hit',
-        'mem_load_retired.l2_miss',
-        'mem_load_retired.l3_hit',
-        'mem_load_retired.l3_miss',
-        'branch-misses',
-        'branch-instructions'
-    ]
+    if architecture == 'x86':
+        all_events = [
+            'frontend_retired.l1i_miss',
+            'instructions',
+            'mem_inst_retired.all_loads',
+            'mem_load_retired.fb_hit',
+            'mem_load_retired.l1_hit',
+            'mem_load_retired.l1_miss',
+            'l2_rqsts.code_rd_hit',
+            'l2_rqsts.code_rd_miss',
+            'mem_load_retired.l2_hit',
+            'mem_load_retired.l2_miss',
+            'mem_load_retired.l3_hit',
+            'mem_load_retired.l3_miss',
+            'branch-misses',
+            'branch-instructions'
+        ]
+        table_name = 'tblFptRCkgwc8IoV'
+    elif architecture == 'arm':
+        all_events = [
+            'l1i_cache',
+            'l1i_cache_refill',
+            'l1d_cache',
+            'l1d_cache_refill',
+            'l2i_cache',
+            'l2i_cache_refill',
+            'l2d_cache',
+            'l2d_cache_refill',
+            'branch-misses'
+        ]
+        table_name = 'tblUJJDqxHS4TqHR'
+    return all_events, table_name
+
+def monitor_perf(pid=0, duration=10, case_name = '', save_local = False, sudo = True):
+    batch_size = 4
+    all_events, table_name = get_perf_event_table()
     sub_events_list = split_events(all_events, batch_size)
     data = []
     start_ts = int(time.time())
@@ -92,10 +123,16 @@ def monitor_perf(pid=0, duration=10, case_name = '', save_local = False):
             ts = time.time()
             data_item = {'case_name': case_name, 'ts': int(ts), 'relative_ts': int(ts-start_ts)}
         sub_events = sub_events_list[i%(len(sub_events_list))]
-        if pid != 0:
-            perf_command = ['sudo', 'perf', 'stat']+[item for event in sub_events for item in ["-e", event]]+['-p', str(pid)]+['sleep', '1']
+        if sudo:
+            perf_command = ['sudo']
         else:
-            perf_command = ['sudo', 'perf', 'stat']+[item for event in sub_events for item in ["-e", event]]+['sleep', '1']
+            perf_command = []
+
+        if pid != 0:
+            perf_command += ['perf', 'stat']+[item for event in sub_events for item in ["-e", event]]+['-p', str(pid)]+['sleep', '1']
+        else:
+            perf_command += ['perf', 'stat']+[item for event in sub_events for item in ["-e", event]]+['sleep', '1']
+
         try:
             # print(' '.join(perf_command))
             # 使用 subprocess 调用 perf 并捕获输出
@@ -104,9 +141,16 @@ def monitor_perf(pid=0, duration=10, case_name = '', save_local = False):
             perf_output = result.stderr
             for line in perf_output.splitlines():
                 for e in sub_events:
-                    if e in line:
-                        # print('debug: line: ', line, ', item: ', line.split()[0].replace(',', ''))
-                        data_item[e] = int(line.split()[0].replace(',', ''))
+                    if len(line.split()) == 2 and e == line.split()[1]:
+                        if 'not supported' in line:
+                            data_item[e] = -1
+                        else:
+                            data_item[e] = int(line.split()[0].replace(',', ''))
+                    elif len(line.split()) >2 and e == line.split()[1]:
+                        if 'not supported' in line:
+                            data_item[e] = -1
+                        else:
+                            data_item[e] = int(line.split()[0].replace(',', ''))
         except Exception as e:
             print(f"Error running perf: {e}")
         # 周期结束，保存数据
@@ -117,7 +161,7 @@ def monitor_perf(pid=0, duration=10, case_name = '', save_local = False):
         if elapsed_time > 0:
             time.sleep(elapsed_time)
     if not save_local:
-        batch_save_lark(data, 'tblFptRCkgwc8IoV')
+        batch_save_lark(data, table_name)
     else:
         save_data_to_csv(data, f"{case_name}_perf_data.csv")
     return data
@@ -180,9 +224,13 @@ def run_sudo_command():
 
     return True
 
-def monitor_memory_bandwidth(duration=10, case_name = '', save_local = False):
+def monitor_memory_bandwidth(duration=10, case_name = '', save_local = False, sudo = True):
     # `pqos` 命令，监控所有核心的 IPC, LLC misses, MBL, MBR 等
-    command = ['sudo', 'pqos', '-m', f'all:0-{psutil.cpu_count()-1}', '-t', str(duration)]  # all:* 表示监控所有 CPU 核心
+    if sudo:
+        command = ['sudo']
+    else:
+        command = []
+    command += ['pqos', '-m', f'all:0-{psutil.cpu_count()-1}', '-t', str(duration)]  # all:* 表示监控所有 CPU 核心
 
     try:
         # print(' '.join(command))
@@ -270,19 +318,20 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--perf', action='store_true', default=False, help='Run perf monitoring')
     parser.add_argument('-s', '--system', action='store_true', default=False, help='Run system usage monitoring')
     parser.add_argument('-m', '--memory', action='store_true', default=False, help='Run memory bandwidth monitoring')
+    parser.add_argument('--no-sudo', action='store_true', default=False, help='Run without sudo')
     args = parser.parse_args()
     case_name = get_case_name()
     print(f'case_name: {case_name}')
     thread_list = []
     if not args.save_local:
         get_access_token()
-    if args.memory or args.perf:
+    if not args.no_sudo and (args.memory or args.perf):
         if not run_sudo_command():
             raise Exception("Sudo authentication failed.")
     if args.memory:
-        thread_list.append(Thread(target=monitor_memory_bandwidth, args=(args.duration, case_name, args.save_local)))
+        thread_list.append(Thread(target=monitor_memory_bandwidth, args=(args.duration, case_name, args.save_local, not args.no_sudo)))
     if args.perf:
-        thread_list.append(Thread(target=monitor_perf, args=(args.pid, args.duration, case_name, args.save_local)))
+        thread_list.append(Thread(target=monitor_perf, args=(args.pid, args.duration, case_name, args.save_local, not args.no_sudo)))
     if args.system:
         thread_list.append(Thread(target=monitor_system_usage, args=(args.duration, case_name, args.save_local)))
     for thread in thread_list:
