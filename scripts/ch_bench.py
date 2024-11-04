@@ -1,5 +1,5 @@
 # useage: 
-# step1: ./hyriseServer -p 5432 --benchmark_data ch_bench:1
+# step1: ./hyriseServer -p 5433 --benchmark_data ch_bench:1
 # step2: python ch_bench.py
 
 import psycopg2
@@ -11,15 +11,15 @@ import queue
 import json
 from datetime import datetime
 import os
-
 os.environ['PGGSSENCMODE'] = 'disable'
+
 # Parse command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", "--num_warehouse", type=int, help="Number of warehouses", default=1)
 parser.add_argument("-cc", "--num_tpcc_threads", type=int, help="Number of TPCC threads", default=1)
 parser.add_argument("-ch", "--num_tpch_threads", type=int, help="Number of TPCH threads", default=1)
-parser.add_argument("-t", "--run_time", type=int, help="Run time", default=360)
-parser.add_argument("-p", "--port", type=str, help="Server port", default='5432')
+parser.add_argument("-t", "--run_time", type=int, help="Run time", default=300)
+parser.add_argument("-p", "--port", type=str, help="Server port", default='5435')
 args = parser.parse_args()
 
 # Get the values from command line arguments
@@ -90,10 +90,10 @@ class TPCC:
             "exec_time": self.exec_time
         }
         self.queue.put(result)
-        # print('tpcc执行成功次数:', self.exec_success_count)
-        # print('tpcc执行失败次数:', self.exec_failed_count)
-        # print('tpcc执行次数:', self.exec_count)
-        # print('tpcc执行耗时(s):', self.exec_time)
+        print('tpcc执行成功次数:', self.exec_success_count)
+        print('tpcc执行失败次数:', self.exec_failed_count)
+        print('tpcc执行次数:', self.exec_count)
+        print('tpcc执行耗时(s):', self.exec_time)
 
     def delivery_trans(self):
         w_id = random.randint(1, num_warehouse)
@@ -113,7 +113,7 @@ class TPCC:
             self.cursor.execute(f"UPDATE ORDER_LINE SET OL_DELIVERY_D = {ol_delivery_d} WHERE OL_W_ID = {w_id} AND OL_D_ID = {d_id} AND OL_O_ID = {no_o_id}" )
             self.cursor.execute(f"UPDATE CUSTOMER SET C_BALANCE = C_BALANCE + {amount}, C_DELIVERY_CNT = C_DELIVERY_CNT + 1 WHERE C_W_ID = {w_id} AND C_D_ID = {d_id} AND C_ID = {o_c_id}" )
         self.db.commit()
-    
+
     def new_order_trans(self):
         w_id = random.randint(1, num_warehouse)
         d_id = random.randint(1, 10)
@@ -200,7 +200,7 @@ class TPCC:
         c_first, c_middle, c_last, c_balance = self.cursor.fetchone()
         self.db.commit()
         # return order_count, o_id, o_entry_d, o_carrier_id, order_lines, c_first, c_middle, c_last, c_balance
-    
+
     def payment_trans(self):
         w_id = random.randint(1, num_warehouse)
         d_id = random.randint(1, 10)
@@ -312,10 +312,10 @@ class TPCH():
             "exec_time": self.exec_time
         }
         self.queue.put(result)
-        # print('tpch执行成功次数:', self.exec_success_count)
-        # print('tpch执行失败次数:', self.exec_failed_count)
-        # print('tpch执行次数:', self.exec_count)
-        # print('tpch执行耗时(s):', self.exec_time)
+        print('tpch执行成功次数:', self.exec_success_count)
+        print('tpch执行失败次数:', self.exec_failed_count)
+        print('tpch执行次数:', self.exec_count)
+        print('tpch执行耗时(s):', self.exec_time)
 
     def q1(self):
         self.cursor.execute('''SELECT   OL_NUMBER,
@@ -327,19 +327,41 @@ COUNT(*) AS COUNT_ORDER
 FROM	 ORDER_LINE
 GROUP BY OL_NUMBER ORDER BY OL_NUMBER;''')
 
+
+    #     def q2(self):
+    #         self.cursor.execute('''select s_suppkey, s_name, n_name, I_ID, I_NAME, s_address, s_phone, s_comment
+    # from     ITEM, supplier, STOCK as b, nation, region,
+    #      (select a.S_I_ID as m_i_id,
+    #          min(a.S_QUANTITY) as m_s_quantity
+    #      from     STOCK as a, supplier, nation, region
+    #      where     ((a.S_W_ID*a.S_I_ID)%10000)=s_suppkey
+    #           and s_nationkey=n_nationkey
+    #           and n_regionkey=r_regionkey
+    #           and r_name like 'EUROP%'
+    #      group by a.S_I_ID) m
+    # where      I_ID = b.S_I_ID
+    #      and ((b.S_W_ID * b.S_I_ID)%10000) = s_suppkey
+    #      and s_nationkey = n_nationkey
+    #      and n_regionkey = r_regionkey
+    #      and I_DATA like '%b'
+    #      and r_name like 'EUROP%'
+    #      and I_ID=m_i_id
+    #      and b.S_QUANTITY = m_s_quantity
+    # order by n_name, s_name, I_ID LIMIT 10;''')
+
     def q2(self):
         self.cursor.execute('''select s_suppkey, s_name, n_name, I_ID, I_NAME, s_address, s_phone, s_comment
 from     ITEM, supplier, STOCK as b, nation, region,
      (select a.S_I_ID as m_i_id,
          min(a.S_QUANTITY) as m_s_quantity
      from     STOCK as a, supplier, nation, region
-     where     ((a.S_W_ID*a.S_I_ID)%10000)=s_suppkey
+     where     a.S_I_ID =s_suppkey
           and s_nationkey=n_nationkey
           and n_regionkey=r_regionkey
           and r_name like 'EUROP%'
      group by a.S_I_ID) m
 where      I_ID = b.S_I_ID
-     and ((b.S_W_ID * b.S_I_ID)%10000) = s_suppkey
+     and b.S_I_ID = s_suppkey
      and s_nationkey = n_nationkey
      and n_regionkey = r_regionkey
      and I_DATA like '%b'
@@ -365,17 +387,17 @@ AND OL_O_ID = O_ID
 GROUP BY OL_O_ID, OL_W_ID, OL_D_ID, O_ENTRY_D
 ORDER BY REVENUE DESC, O_ENTRY_D LIMIT 10;''')
 
-#     def q4(self):
-#         self.cursor.execute('''SELECT O_OL_CNT, COUNT(*) AS ORDER_COUNT
-# FROM "ORDER"
-#     WHERE EXISTS (SELECT *
-#             FROM ORDER_LINE
-#             WHERE O_ID = OL_O_ID
-#             AND O_W_ID = OL_W_ID
-#             AND O_D_ID = OL_D_ID
-#             AND OL_DELIVERY_D >= O_ENTRY_D)
-# GROUP    BY O_OL_CNT
-# ORDER    BY O_OL_CNT LIMIT 10;''')
+    #     def q4(self):
+    #         self.cursor.execute('''SELECT O_OL_CNT, COUNT(*) AS ORDER_COUNT
+    # FROM "ORDER"
+    #     WHERE EXISTS (SELECT *
+    #             FROM ORDER_LINE
+    #             WHERE O_ID = OL_O_ID
+    #             AND O_W_ID = OL_W_ID
+    #             AND O_D_ID = OL_D_ID
+    #             AND OL_DELIVERY_D >= O_ENTRY_D)
+    # GROUP    BY O_OL_CNT
+    # ORDER    BY O_OL_CNT LIMIT 10;''')
 
     def q4(self):
         self.cursor.execute('''SELECT O.O_OL_CNT, COUNT(*) AS ORDER_COUNT
@@ -388,25 +410,25 @@ GROUP BY O.O_OL_CNT
 ORDER BY O.O_OL_CNT
 LIMIT 10;''')
 
-#     def q5(self):
-#         self.cursor.execute('''SELECT n_name,
-# SUM(OL_AMOUNT) AS REVENUE
-# FROM     CUSTOMER, "ORDER", ORDER_LINE, STOCK, supplier, nation, region
-# WHERE     C_ID = O_C_ID
-# AND C_W_ID = O_W_ID
-# AND C_D_ID = O_D_ID
-# AND OL_O_ID = O_ID
-# AND OL_W_ID = O_W_ID
-# AND OL_D_ID=O_D_ID
-# AND OL_W_ID = S_W_ID
-# AND OL_I_ID = S_I_ID
-# AND ((S_W_ID * S_I_ID)%10000) = s_suppkey
-# AND s_nationkey = n_nationkey
-# AND n_regionkey = r_regionkey
-# AND r_name = 'EUROPE'
-# AND (C_ID%25) = s_nationkey
-# GROUP BY n_name
-# ORDER BY REVENUE DESC LIMIT 10;''')
+    #     def q5(self):
+    #         self.cursor.execute('''SELECT n_name,
+    # SUM(OL_AMOUNT) AS REVENUE
+    # FROM     CUSTOMER, "ORDER", ORDER_LINE, STOCK, supplier, nation, region
+    # WHERE     C_ID = O_C_ID
+    # AND C_W_ID = O_W_ID
+    # AND C_D_ID = O_D_ID
+    # AND OL_O_ID = O_ID
+    # AND OL_W_ID = O_W_ID
+    # AND OL_D_ID=O_D_ID
+    # AND OL_W_ID = S_W_ID
+    # AND OL_I_ID = S_I_ID
+    # AND ((S_W_ID * S_I_ID)%10000) = s_suppkey
+    # AND s_nationkey = n_nationkey
+    # AND n_regionkey = r_regionkey
+    # AND r_name = 'EUROPE'
+    # AND (C_ID%25) = s_nationkey
+    # GROUP BY n_name
+    # ORDER BY REVENUE DESC LIMIT 10;''')
 
     def q5(self):
         self.cursor.execute('''SELECT n_name,
@@ -495,7 +517,21 @@ WHERE     OL_I_ID = S_I_ID
      AND I_DATA LIKE '%bb'
 GROUP BY n_name, ((O_ENTRY_D/31536000)+1970)
 ORDER BY n_name, L_YEAR DESC LIMIT 10;''')
-        
+
+    #     def q10(self):
+    #         self.cursor.execute('''SELECT     C_ID, C_LAST, SUM(OL_AMOUNT) AS REVENUE, C_CITY, C_PHONE, n_name
+    # FROM     CUSTOMER, "ORDER", ORDER_LINE, nation
+    # WHERE     C_ID = O_C_ID
+    #      AND C_W_ID = O_W_ID
+    #      AND C_D_ID = O_D_ID
+    #      AND OL_W_ID = O_W_ID
+    #      AND OL_D_ID = O_D_ID
+    #      AND OL_O_ID = O_ID
+    #      AND O_ENTRY_D <= OL_DELIVERY_D
+    #      AND (C_ID%25) = n_nationkey
+    # GROUP BY C_ID, C_LAST, C_CITY, C_PHONE, n_name
+    # ORDER BY REVENUE DESC LIMIT 10;''')
+
     def q10(self):
         self.cursor.execute('''SELECT     C_ID, C_LAST, SUM(OL_AMOUNT) AS REVENUE, C_CITY, C_PHONE, n_name
 FROM     CUSTOMER, "ORDER", ORDER_LINE, nation
@@ -506,14 +542,29 @@ WHERE     C_ID = O_C_ID
      AND OL_D_ID = O_D_ID
      AND OL_O_ID = O_ID
      AND O_ENTRY_D <= OL_DELIVERY_D
-     AND (C_ID%25) = n_nationkey
+     AND C_ID = n_nationkey
 GROUP BY C_ID, C_LAST, C_CITY, C_PHONE, n_name
 ORDER BY REVENUE DESC LIMIT 10;''')
-        
+
+    #     def q11(self):
+    #         self.cursor.execute('''SELECT     S_I_ID, SUM(S_ORDER_CNT) AS ORDERCOUNT
+    # FROM     STOCK, supplier, nation
+    # WHERE     ((S_W_ID * S_I_ID)%10000) = s_suppkey
+    #      AND s_nationkey = n_nationkey
+    #      AND n_name = 'GERMANY'
+    # GROUP BY S_I_ID
+    # HAVING   SUM(S_ORDER_CNT) >
+    #         (SELECT SUM(S_ORDER_CNT) * .005
+    #         FROM STOCK, supplier, nation
+    #         WHERE ((S_W_ID * S_I_ID)%10000) = s_suppkey
+    #         AND s_nationkey = n_nationkey
+    #         AND n_name = 'GERMANY')
+    # ORDER BY ORDERCOUNT DESC LIMIT 10;''')
+
     def q11(self):
         self.cursor.execute('''SELECT     S_I_ID, SUM(S_ORDER_CNT) AS ORDERCOUNT
 FROM     STOCK, supplier, nation
-WHERE     ((S_W_ID * S_I_ID)%10000) = s_suppkey
+WHERE     S_I_ID = s_suppkey
      AND s_nationkey = n_nationkey
      AND n_name = 'GERMANY'
 GROUP BY S_I_ID
@@ -524,7 +575,7 @@ HAVING   SUM(S_ORDER_CNT) >
         AND s_nationkey = n_nationkey
         AND n_name = 'GERMANY')
 ORDER BY ORDERCOUNT DESC LIMIT 10;''')
-        
+
     def q12(self):
         self.cursor.execute('''SELECT     O_OL_CNT,
 SUM(CASE WHEN O_CARRIER_ID = 1 OR O_CARRIER_ID = 2 THEN 1 ELSE 0 END) AS HIGH_LINE_COUNT,
@@ -536,7 +587,7 @@ AND OL_O_ID = O_ID
 AND O_ENTRY_D <= OL_DELIVERY_D
 GROUP BY O_OL_CNT
 ORDER BY O_OL_CNT LIMIT 10;''')
-        
+
     def q13(self):
         self.cursor.execute('''SELECT     C_COUNT, COUNT(*) AS CUSTDIST
 FROM     (SELECT C_ID, COUNT(O_ID)
@@ -548,13 +599,13 @@ FROM     (SELECT C_ID, COUNT(O_ID)
      GROUP BY C_ID) AS C_ORDER (C_ID, C_COUNT)
 GROUP BY C_COUNT
 ORDER BY CUSTDIST DESC, C_COUNT DESC LIMIT 10;''')
-        
+
     def q14(self):
         self.cursor.execute('''SELECT    100.00 * SUM(CASE WHEN I_DATA LIKE 'pr%' THEN OL_AMOUNT ELSE 0 END) / (1+SUM(OL_AMOUNT)) AS PROMO_REVENUE
 FROM ORDER_LINE, ITEM
 WHERE OL_I_ID = I_ID
     LIMIT 10;''')
-    
+
     def q15(self):
         self.cursor.execute('''WITH     REVENUE AS (
 SELECT ((S_W_ID * S_I_ID)%10000) AS SUPPLIER_NO,
@@ -567,7 +618,7 @@ FROM     supplier, REVENUE
 WHERE     s_suppkey = SUPPLIER_NO
 AND TOTAL_REVENUE = (SELECT MAX(TOTAL_REVENUE) FROM REVENUE)
 ORDER BY s_suppkey LIMIT 10;''')
-        
+
     def q16(self):
         self.cursor.execute('''SELECT     I_NAME,
 SUBSTR(I_DATA, 1, 3) AS BRAND,
@@ -582,7 +633,7 @@ AND (((S_W_ID * S_I_ID)%10000) NOT IN
     WHERE s_comment LIKE '%bad%'))
 GROUP BY I_NAME, SUBSTR(I_DATA, 1, 3), I_PRICE
 ORDER BY SUPPLIER_CNT DESC LIMIT 10;''')
-        
+
     def q17(self):
         self.cursor.execute('''SELECT    SUM(OL_AMOUNT) / 2.0 AS AVG_YEARLY
 FROM ORDER_LINE, (SELECT   I_ID, AVG(OL_QUANTITY) AS A
@@ -592,7 +643,7 @@ FROM ORDER_LINE, (SELECT   I_ID, AVG(OL_QUANTITY) AS A
             GROUP BY I_ID) T
 WHERE OL_I_ID = T.I_ID
     AND OL_QUANTITY < T.A LIMIT 10;''')
-        
+
     def q18(self):
         self.cursor.execute('''SELECT     C_LAST, C_ID, O_ID, O_ENTRY_D, O_OL_CNT, SUM(OL_AMOUNT)
 FROM     CUSTOMER, "ORDER", ORDER_LINE
@@ -605,7 +656,7 @@ WHERE     C_ID = O_C_ID
 GROUP BY O_ID, O_W_ID, O_D_ID, C_ID, C_LAST, O_ENTRY_D, O_OL_CNT
 HAVING     SUM(OL_AMOUNT) > 200
 ORDER BY SUM(OL_AMOUNT) DESC, O_ENTRY_D LIMIT 10;''')
-        
+
     def q19(self):
         self.cursor.execute('''SELECT    SUM(OL_AMOUNT) AS REVENUE
 FROM ORDER_LINE, ITEM
@@ -631,7 +682,7 @@ WHERE    (
       AND I_PRICE BETWEEN 1 AND 400000
       AND OL_W_ID IN (1,5,3)
     ) LIMIT 10;''')
-        
+
     def q20(self):
         self.cursor.execute('''SELECT   s_name, s_address
 FROM     supplier, nation
@@ -648,28 +699,52 @@ WHERE    s_suppkey IN
      AND s_nationkey = n_nationkey
      AND n_name = 'GERMANY'
 ORDER BY s_name LIMIT 10;''')
-        
+
+    #     def q21(self):
+    #         self.cursor.execute('''SELECT     s_name, COUNT(*) AS NUMWAIT
+    # FROM     supplier, ORDER_LINE L1, "ORDER", STOCK, nation
+    # WHERE     OL_O_ID = O_ID
+    #      AND OL_W_ID = O_W_ID
+    #      AND OL_D_ID = O_D_ID
+    #      AND OL_W_ID = S_W_ID
+    #      AND OL_I_ID = S_I_ID
+    #      AND ((S_W_ID * S_I_ID)%10000) = s_suppkey
+    #      AND L1.OL_DELIVERY_D > O_ENTRY_D
+    #      AND NOT EXISTS (SELECT *
+    #              FROM ORDER_LINE L2
+    #              WHERE  L2.OL_O_ID = L1.OL_O_ID
+    #                 AND L2.OL_W_ID = L1.OL_W_ID
+    #                 AND L2.OL_D_ID = L1.OL_D_ID
+    #                 AND L2.OL_DELIVERY_D > L1.OL_DELIVERY_D)
+    #      AND s_nationkey = n_nationkey
+    #      AND n_name = 'GERMANY'
+    # GROUP BY s_name
+    # ORDER BY NUMWAIT DESC, s_name LIMIT 10;''')
+
     def q21(self):
-        self.cursor.execute('''SELECT     s_name, COUNT(*) AS NUMWAIT
-FROM     supplier, ORDER_LINE L1, "ORDER", STOCK, nation
-WHERE     OL_O_ID = O_ID
-     AND OL_W_ID = O_W_ID
-     AND OL_D_ID = O_D_ID
-     AND OL_W_ID = S_W_ID
-     AND OL_I_ID = S_I_ID
-     AND ((S_W_ID * S_I_ID)%10000) = s_suppkey
+        self.cursor.execute('''WITH max_delivery AS (
+    SELECT OL_O_ID, OL_W_ID, OL_D_ID, MAX(OL_DELIVERY_D) AS MAX_DELIVERY_D
+    FROM ORDER_LINE
+    GROUP BY OL_O_ID, OL_W_ID, OL_D_ID
+)
+SELECT     s_name, COUNT(*) AS NUMWAIT
+FROM     supplier, ORDER_LINE L1, "ORDER", STOCK, nation, max_delivery MD
+WHERE    L1.OL_O_ID = O_ID
+     AND L1.OL_W_ID = O_W_ID
+     AND L1.OL_D_ID = O_D_ID
+     AND L1.OL_W_ID = S_W_ID
+     AND L1.OL_I_ID = S_I_ID
+     AND S_I_ID = s_suppkey 
      AND L1.OL_DELIVERY_D > O_ENTRY_D
-     AND NOT EXISTS (SELECT *
-             FROM ORDER_LINE L2
-             WHERE  L2.OL_O_ID = L1.OL_O_ID
-                AND L2.OL_W_ID = L1.OL_W_ID
-                AND L2.OL_D_ID = L1.OL_D_ID
-                AND L2.OL_DELIVERY_D > L1.OL_DELIVERY_D)
+     AND L1.OL_O_ID = MD.OL_O_ID
+     AND L1.OL_W_ID = MD.OL_W_ID
+     AND L1.OL_D_ID = MD.OL_D_ID
+     AND L1.OL_DELIVERY_D = MD.MAX_DELIVERY_D
      AND s_nationkey = n_nationkey
      AND n_name = 'GERMANY'
 GROUP BY s_name
 ORDER BY NUMWAIT DESC, s_name LIMIT 10;''')
-        
+
     def q22(self):
         self.cursor.execute('''SELECT     SUBSTR(C_STATE,1,1) AS COUNTRY,
 COUNT(*) AS NUMCUST,
@@ -686,10 +761,10 @@ AND NOT EXISTS (SELECT *
                 AND O_W_ID = C_W_ID
                AND O_D_ID = C_D_ID)
 GROUP BY SUBSTR(C_STATE,1,1)
-ORDER BY SUBSTR(C_STATE,1,1) LIMIT 10;''')        
+ORDER BY SUBSTR(C_STATE,1,1) LIMIT 10;''')
 
 
-# tpcc_instance = TPCC(num_warehouse=num_warehouse, port='5432', time=30)
+    # tpcc_instance = TPCC(num_warehouse=num_warehouse, port='5432', time=30)
 # tpcc_instance.run()
 # tpch_instance = TPCH(num_warehouse=num_warehouse, port='5432', time=360)
 # tpch_instance.run()
