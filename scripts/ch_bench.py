@@ -244,7 +244,7 @@ class TPCH():
 
     def run(self):
         start_time = time.time()
-        exec_query = 1
+        exec_query = self.id % 22 + 1
         while(time.time() - start_time < self.run_time):
             query_start_time = time.time()
             try:
